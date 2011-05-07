@@ -30,8 +30,6 @@ require_once 'Image/GraphViz.php';
  *              current folder will be used
  * * format - an optional output format, supported by GraphViz (png,svg,etc)
  *
- * @todo Add support for earlier versions of CakePHP
- *
  * @package app
  * @subpackage Utils
  * @author Leonid Mamchenkov <leonid@mamchenkov.net>
@@ -142,27 +140,51 @@ class GraphShell extends Shell {
 	/**
 	 * Get a list of all models to process
 	 *
-	 * Thanks to Harsha M V and Peter Martin via
-	 * http://variable3.com/blog/2010/05/list-all-the-models-and-plugins-of-a-cakephp-application/
+	 * Thanks to Google, Harsha M V and Peter Martin
 	 *
+	 * @link http://variable3.com/blog/2010/05/list-all-the-models-and-plugins-of-a-cakephp-application/
 	 * @return array
 	 */
 	private function getModels() {
 		$result = array();
 
-		$result['app'] = App::objects('model');
+		$versionString = Configure::version();
+		list($major, $minor, $rest) = explode('.', $versionString);
 
-		$plugins = App::objects('plugin');
-		if (!empty($plugins)) {
-			foreach ($plugins as $plugin) {
-				$pluginModels = App::objects('model', App::pluginPath($plugin) . 'models' . DS, false);
-				if (!empty($pluginModels)) {
-					if (empty($result[$plugin])) {
-						$result[$plugin] = array();
+		// 2.0 => 20, 1.3 => 13
+		$version = ($major * 10) + $minor;
+
+		// New CakePHP
+		if ($version >= 13) {
+			$result['app'] = App::objects('model');
+			$plugins = App::objects('plugin');
+			if (!empty($plugins)) {
+				foreach ($plugins as $plugin) {
+					$pluginModels = App::objects('model', App::pluginPath($plugin) . 'models' . DS, false);
+					if (!empty($pluginModels)) {
+						if (empty($result[$plugin])) {
+							$result[$plugin] = array();
+						}
+
+						foreach ($pluginModels as $model) {
+							$result[$plugin][] = "$plugin.$model";
+						}
 					}
-
-					foreach ($pluginModels as $model) {
-						$result[$plugin][] = "$plugin.$model";
+				}
+			}
+		}
+		// Old CakePHP
+		else {
+			$result['app'] = Configure::listObjects('model');
+			$plugins = Configure::listObjects('plugin');
+			if (!empty($plugins)) {
+				foreach ($plugins as $plugin) {
+					$pluginPath = APP . 'plugins' . DS . Inflector::underscore($plugin) . DS . 'models' . DS;
+					$pluginModels = Configure::listObjects('model', $pluginPath, false);
+					if (!empty($pluginModels)) {
+						foreach ($pluginModels as $model) {
+							$result[$plugin][] = "$plugin.$model";
+						}
 					}
 				}
 			}
