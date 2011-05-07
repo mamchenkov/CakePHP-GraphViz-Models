@@ -94,9 +94,6 @@ class GraphShell extends Shell {
 
 		foreach ($modelsList as $plugin => $models) {
 			foreach ($models as $model) {
-				if ($model == 'BaseWorkflow') {
-					continue;
-				}
 
 				$modelInstance = ClassRegistry::init($model);
 
@@ -119,16 +116,24 @@ class GraphShell extends Shell {
 	 * @param array $settings Settings
 	 * @return void
 	 */
-	private function buildGraph($models, $relations, $settings) {
+	private function buildGraph($modelsList, $relationsList, $settings) {
 
-		foreach ($models['app'] as $model) {
-			$this->graph->addNode($model, array('label' => $model, 'shape' => 'box'));
+		foreach ($modelsList as $plugin => $models) {
+			foreach ($models as $model) {
+				$this->graph->addNode($model, array('label' => $model, 'shape' => 'box'));
+			}
 		}
 
-		foreach ($relations['app'] as $model => $relations) {
-			foreach ($relations as $relation => $relatedModels) {
-				foreach ($relatedModels as $relatedModel) {
-					$this->graph->addEdge(array($model => $relatedModel), array('label' => $relation, 'color' => $settings[$relation]['color'], 'dir' => $settings[$relation]['dir']));
+		foreach ($relationsList as $plugin => $relations) {
+			foreach ($relations as $model => $relations) {
+				foreach ($relations as $relation => $relatedModels) {
+
+					$relationsSettings = $settings[$relation];
+					$relationsSettings['label'] = $relation;
+
+					foreach ($relatedModels as $relatedModel) {
+						$this->graph->addEdge(array($model => $relatedModel), $relationsSettings);
+					}
 				}
 			}
 		}
