@@ -1,0 +1,57 @@
+CakePHP GraphViz Models
+
+
+This is a CakePHP shell that will find all models in your CakePHP application and
+plugins, figure out the relationships between them, and will build a nice graph,
+visualzing those relationships for you.
+
+It supports CakePHP 1.2, CakePHP 1.3, and sometimes even CakePHP 2.0.  But there 
+are numerous ways it can fail to work for you.  If it does fail, please let me
+know and I'll try to fix it.
+
+
+Intallation
+
+
+1. Save the source of the script as app/vendors/shells/graph.php
+2. There is no step 2.
+
+
+
+Requirements
+
+
+Since version 2.0 (Blue Octopus On Steroids), this script relies on Image/Graphviz
+PEAR package, rather than directly on the command-line dot tool.  If you are using
+a real operating system, you probably already have Image/GraphViz installed.  If
+not, fetch with Yum, pear, or whatever is that your favourite tool for the job.
+
+
+
+Usage
+
+
+The simplest way to use this shell is just to run it via CakePHP console:
+
+ $ php -f cake/console/cake.php graph
+
+This should generate a graph.png image in your current directory.  Please have a look.
+
+If you need more control, there are two options that this shell understand from the
+command line: filename and format.   You can use either the filename option like so:
+
+ $ php -f cake/console/cake.php graph /tmp/my_models.png
+
+Or you can use both options together like so:
+
+ $ php -f cake/console/cake.php graph /tmp/my_models.svg svg
+
+No special magic is done about the filename.  What You Give Is What You Get.  As for the
+format, you can use anything that GraphViz supports and understands.
+
+If you are still looking for more control, have a look inside the script.  There are 
+plenty of settings, options, parameters, and comments for you to make sense of it all. It
+might be helpful to get familiar with GraphViz Dot Language, just to feel a tiny bit more
+confident.
+
+Enjoy!
