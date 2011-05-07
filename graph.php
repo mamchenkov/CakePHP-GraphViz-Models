@@ -46,6 +46,7 @@ class GraphShell extends Shell {
 				'label' => 'Model relationships (as of ' . date('Y-m-d H:i:s') . ')', 
 				'labelloc' => 't',
 			);
+
 		$this->graph = new Image_GraphViz(true, $graphSettings, 'models');
 
 		$models = array();
@@ -57,10 +58,10 @@ class GraphShell extends Shell {
 		 * If you graph is too noisy, try commenting out some of the relationships here
 		 */
 		$relationsSettings = array(
-			'belongsTo'           => array('label' => 'belongsTo', 'dir' => 'forward', 'color' => 'green'),
-			'hasOne'              => array('label' => 'hasOne', 'dir' => 'forward', 'color' => 'magenta'),
-			'hasMany'             => array('label' => 'hasMany', 'dir' => 'forward', 'color' => 'blue'),
-			'hasAndBelongsToMany' => array('label' => 'HABTM', 'dir' => 'both', 'color' => 'red'),
+			'belongsTo'           => array('label' => 'belongsTo', 'dir' => 'both', 'color' => 'green', 'arrowhead' => 'tee', 'arrowtail' => 'crow'),
+			'hasOne'              => array('label' => 'hasOne',    'dir' => 'both', 'color' => 'magenta', 'arrowhead' => 'tee', 'arrowtail' => 'tee'),
+			'hasMany'             => array('label' => 'hasMany',   'dir' => 'both', 'color' => 'blue', 'arrowhead' => 'crow', 'arrowtail' => 'tee'),
+			'hasAndBelongsToMany' => array('label' => 'HABTM',     'dir' => 'both', 'color' => 'red',  'arrowhead' => 'crow', 'arrowtail' => 'crow'),
 		);
 		$relationsData = $this->getRelations($models, $relationsSettings);
 
@@ -159,23 +160,55 @@ class GraphShell extends Shell {
 	 */
 	private function buildGraph($modelsList, $relationsList, $settings) {
 
+		// We'll collect apps and plugins in here
+		$plugins = array();
+
+		// Add nodes for all models
 		foreach ($modelsList as $plugin => $models) {
+			if (!in_array($plugin, $plugins)) {
+				$plugins[] = $plugin;
+			}
+
 			foreach ($models as $model) {
-				$this->graph->addNode($model, array('label' => $model, 'shape' => 'box'));
+				$label = preg_replace("/^$plugin\./", '', $model);
+				$this->graph->addNode($model, array('label' => $label, 'shape' => 'box'), $plugin);
 			}
 		}
 
+		// Add all relations
 		foreach ($relationsList as $plugin => $relations) {
+			if (!in_array($plugin, $plugins)) {
+				$plugins[] = $plugin;
+			}
+
 			foreach ($relations as $model => $relations) {
 				foreach ($relations as $relation => $relatedModels) {
 
 					$relationsSettings = $settings[$relation];
+					$relationsSettings['label'] = ''; // no need to pollute the graph with too many labels
 
 					foreach ($relatedModels as $relatedModel) {
 						$this->graph->addEdge(array($model => $relatedModel), $relationsSettings);
 					}
 				}
 			}
+		}
+
+		// Add special cluster for Legend
+		$plugins[] = 'Graph Legend';
+		foreach ($settings as $relation => $relationSettings) {
+			$from = 'legend_' . (string) rand(1,10000);
+			$to = 'legend_' . (string) rand(1,10000);
+			$this->graph->addNode($from, array('label' => '', 'shape' => 'box'), 'Graph Legend');
+			$this->graph->addNode($to, array('label' => '', 'shape' => 'box'), 'Graph Legend');
+
+			$relationSettings['labelfontzie'] = 10;
+			$this->graph->addEdge(array($from => $to), $relationSettings);
+		}
+
+		// Add clusters for apps and plugins
+		foreach ($plugins as $plugin) {
+			$this->graph->addCluster($plugin, $plugin);
 		}
 	}
 
