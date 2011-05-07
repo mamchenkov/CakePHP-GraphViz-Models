@@ -5,6 +5,12 @@
  * @package app
  * @subpackage app.vendors.shells
  */
+
+/**
+ * Requre Image_GraphViz class from the PEAR package
+ */
+require_once 'Image/GraphViz.php';
+
 /**
  * CakePHP GraphViz Models
  *
@@ -19,50 +25,42 @@
 class GraphShell extends Shell {
 
 	/**
-	 * Graph settings for each type of the relationship.
-	 *
-	 * Consult GraphViz documentation for dot language if
-	 * you need more information.
+	 * We'll use this to store the graph thingy
 	 */
-	private $relationsSettings = array(
-			'belongsTo'           => array('dir' => 'forward', 'color' => 'green'),
-			'hasOne'              => array('dir' => 'forward', 'color' => 'magenta'),
-			'hasMany'             => array('dir' => 'forward', 'color' => 'blue'),
-			'hasAndBelongsToMany' => array('dir' => 'both', 'color' => 'red'),
-		);
+	private $graph;
 
 	/**
 	 * Main
 	 */
 	public function main() {
 
-		$relationsData = array();
+		/**
+		 * Graph settings
+		 *
+		 * Consult the GraphViz documentation for more options
+		 */
+		$graphSettings = array(
+				'label' => 'Model relationships (as of ' . date('Y-m-d H:i:s') . ')', 
+				'labelloc' => 't',
+			);
+		$this->graph = new Image_GraphViz(true, $graphSettings, 'models');
+
 		$models = array();
 		$models['app'] = $this->getModels();
 
-		foreach ($models['app'] as $model) {
-			if ($model == 'BaseWorkflow') {
-				continue;
-			}
+		/**
+		 * Relations settings
+		 */
+		$relationsSettings = array(
+			'belongsTo'           => array('dir' => 'forward', 'color' => 'green'),
+			'hasOne'              => array('dir' => 'forward', 'color' => 'magenta'),
+			'hasMany'             => array('dir' => 'forward', 'color' => 'blue'),
+			'hasAndBelongsToMany' => array('dir' => 'both', 'color' => 'red'),
+		);
+		$relationsData = $this->getRelations($models, $relationsSettings);
 
-			$modelInstance = ClassRegistry::init($model);
-
-			foreach ($this->relationsSettings as $relation => $settings) {
-				if (!empty($modelInstance->$relation) && is_array($modelInstance->$relation)) {
-					$relationsData['app'][$model][$relation] = array_keys($modelInstance->$relation);
-				}
-			}
-		}
-
-		// Let's build the graph string now
-		$graph = '';
-		$graph .= $this->buildGraphHead();
-		$graph .= $this->buildGraphLegend($this->relationsSettings);
-		$graph .= $this->buildNodeClusters($models);
-		$graph .= $this->buildNodeRelations($relationsData, $this->relationsSettings);
-		$graph .= $this->buildGraphTail();
-
-		$this->out($graph);
+		$this->buildGraph($models, $relationsData, $relationsSettings);
+		$this->outputGraph();
 	}
 
 	/**
@@ -85,98 +83,26 @@ class GraphShell extends Shell {
 	}
 
 	/**
-	 * Generate the graph header
+	 * Get the list of relationss for given models
 	 *
-	 * Here we start building the graph string in dot language
-	 *
-	 * @return string
+	 * @param array $modelsList List of models by module (apps, plugins, etc)
+	 * @param array $relationsSettings Relationship settings
+	 * @return array
 	 */
-	private function buildGraphHead() {
-		$result = '';
+	private function getRelations($modelsList, $relationsSettings) {
+		$result = array();
 
-		$result .= "digraph models {\n";
-		$result .= "\tlabel=\"Model relationships (Date: " . date('Y-m-d H:i:s') . ")\";\n";
-		$result .= "\tlabelloc=\"t\";\n";
-		//$result .= "\trankdir=\"LR\";\n";
-		$result .= "\tnode [shape=\"box\"];\n";
+		foreach ($modelsList as $plugin => $models) {
+			foreach ($models as $model) {
+				if ($model == 'BaseWorkflow') {
+					continue;
+				}
 
-		return $result;
-	}
+				$modelInstance = ClassRegistry::init($model);
 
-	/**
-	 * Generate graph legend
-	 *
-	 * Here we build the legend, describing the colors we use for
-	 * different relationships and such
-	 *
-	 * @param array $settings Relationship settings
-	 * @return string
-	 */
-	private function buildGraphLegend($settings) {
-		$result = '';
-
-		$result .= "\tsubgraph clusterLegend {\n";
-		$result .= "\t\tlabel=\"Legend\";\n";
-		$result .= "\t\tstyle=\"filled\";\n";
-
-		$second = '';
-		foreach ($settings as $type => $options) {
-			$options['label'] = $type;
-			list($first, $second) = $this->getTargets($second);
-			$result .= "\t" . $this->prepareRelation($first, $second, $options);
-		}
-		$result .= "\t}\n";
-
-		return $result;
-	}
-
-	/**
-	 * Generate clusters of nodes
-	 *
-	 * Here we group models together so that they would end up
-	 * either in the 'app' cluster or in their approrpriate 
-	 * plugin cluster.
-	 *
-	 * @param array $models List of models by plugin
-	 * @return string
-	 */
-	private function buildNodeClusters($models) {
-		$result = '';
-
-		foreach ($models as $parent => $list) {
-
-			// Generate a cluster subgraph for each model path (app/models, plugin/*/models)
-			$result .= "\tsubgraph cluster$parent {\n";
-			$result .= "\t\tlabel=\"$parent\";\n";
-
-			asort($list, SORT_STRING);
-			foreach ($list as $modelName) {
-				$result .= "\t\t" . $this->prepareNode($modelName, array());
-			}
-			$result .= "\t}\n";
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Generate the relations part of the graph
-	 *
-	 * This is what links all models on the graph to each other
-	 *
-	 * @param array $relationData Relationships data
-	 * @param array $relationSettings Settings to use for relations
-	 * @return string
-	 */
-	private function buildNodeRelations($relationData, $relationSettings) {
-		$result = '';
-
-		foreach ($relationData as $parent => $models) {
-
-			foreach ($models as $modelName => $relations) {
-				foreach ($relations as $type => $targets) {
-					foreach ($targets as $targetModel) {
-						$result .= $this->prepareRelation($modelName, $targetModel, $relationSettings[$type]);
+				foreach ($relationsSettings as $relation => $settings) {
+					if (!empty($modelInstance->$relation) && is_array($modelInstance->$relation)) {
+						$result[$plugin][$model][$relation] = array_keys($modelInstance->$relation);
 					}
 				}
 			}
@@ -186,85 +112,44 @@ class GraphShell extends Shell {
 	}
 
 	/**
-	 * Generate the end of the graph
+	 * Populate graph with nodes and edges
 	 *
-	 * Close everything that we opened in the head or anywhere else along
-	 * the way.  Shouldn't be much.
-	 *
-	 * @return string
+	 * @param array $models Available models
+	 * @param array $relations Availalbe relationships
+	 * @param array $settings Settings
+	 * @return void
 	 */
-	private function buildGraphTail() {
-		$result = '';
+	private function buildGraph($models, $relations, $settings) {
 
-		$result .= "}\n";
-
-		return $result;
-	}
-
-	/**
-	 * Get two characters to use as targets in the legend
-	 *
-	 * @param string $last Last-used character
-	 * @return array
-	 */
-	private function getTargets($last = null) {
-		if (! $last) {
-			$last = '@'; // Next ASCII table character is A
-		}
-		$first = chr(ord($last) + 1);
-		$second = chr(ord($last) + 2);
-
-		return array($first, $second);
-	}
-
-	/**
-	 * Generate a relation string in dot format
-	 * 
-	 * @param string $from Source node 
-	 * @param string $to Destination node 
-	 * @param array $settings Array of edge settings
-	 */
-	private function prepareRelation($from, $to, $settings) {
-		$result = '';
-
-		$settingsString = $this->prepareSettings($settings);
-		$result = sprintf("\t%s -> %s %s;\n", $from, $to, $settingsString);
-
-		return $result;
-	}
-
-	/**
-	 * Convert an array of settings into dot string
-	 *
-	 * @param array $settings Associative array of settings
-	 * @return string
-	 */
-	private function prepareSettings($settings) {
-		$result = '';
-
-		foreach ($settings as $key => $value) {
-			$result .= sprintf("%s=\"%s\", ", $key, $value);
-		}
-		$result = preg_replace('/,\s$/', '', $result);
-		if ($result) {
-			$result = "[$result]";
+		foreach ($models['app'] as $model) {
+			$this->graph->addNode($model, array('label' => $model, 'shape' => 'box'));
 		}
 
-		return $result;
+		foreach ($relations['app'] as $model => $relations) {
+			foreach ($relations as $relation => $relatedModels) {
+				foreach ($relatedModels as $relatedModel) {
+					$this->graph->addEdge(array($model => $relatedModel), array('label' => $relation, 'color' => $settings[$relation]['color'], 'dir' => $settings[$relation]['dir']));
+				}
+			}
+		}
 	}
 
 	/**
-	 * Generate a node string in dot format
+	 * Save graph to a file
 	 *
-	 * @param string $node Node name
-	 * @param array $settings Array of node settings
-	 * @return string
+	 * @param string $fileName File to save graph to (full path)
+	 * @param string $format Any of the GraphViz supported formats
+	 * @return numeric Number of bytes written to file
 	 */
-	private function prepareNode($node, $settings) {
-		$result = '';
+	private function outputGraph($fileName = null, $format = 'png') {
+		$result = 0;
 
-		$settingsString = $this->prepareSettings($settings);
-		$result = sprintf("\t%s %s;\n", $node, $settingsString);
+		if (empty($fileName)) {
+			$fileName = dirname(__FILE__) . DS . basename(__FILE__, '.php') . '.' . $format;
+		}
+
+		$imageData = $this->graph->fetch($format);
+		$result = file_put_contents($fileName, $imageData);
 
 		return $result;
 	}
