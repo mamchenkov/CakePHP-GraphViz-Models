@@ -52,10 +52,10 @@ class GraphShell extends Shell {
 		 * Relations settings
 		 */
 		$relationsSettings = array(
-			'belongsTo'           => array('dir' => 'forward', 'color' => 'green'),
-			'hasOne'              => array('dir' => 'forward', 'color' => 'magenta'),
-			'hasMany'             => array('dir' => 'forward', 'color' => 'blue'),
-			'hasAndBelongsToMany' => array('dir' => 'both', 'color' => 'red'),
+			'belongsTo'           => array('label' => 'belongsTo', 'dir' => 'forward', 'color' => 'green'),
+			'hasOne'              => array('label' => 'hasOne', 'dir' => 'forward', 'color' => 'magenta'),
+			'hasMany'             => array('label' => 'hasMany', 'dir' => 'forward', 'color' => 'blue'),
+			'hasAndBelongsToMany' => array('label' => 'HABTM', 'dir' => 'both', 'color' => 'red'),
 		);
 		$relationsData = $this->getRelations($models, $relationsSettings);
 
@@ -129,7 +129,6 @@ class GraphShell extends Shell {
 				foreach ($relations as $relation => $relatedModels) {
 
 					$relationsSettings = $settings[$relation];
-					$relationsSettings['label'] = $relation;
 
 					foreach ($relatedModels as $relatedModel) {
 						$this->graph->addEdge(array($model => $relatedModel), $relationsSettings);
