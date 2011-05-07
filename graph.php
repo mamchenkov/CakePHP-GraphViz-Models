@@ -18,6 +18,9 @@ require_once 'Image/GraphViz.php';
  * finds all relations between them, and then generates a graphical representation
  * of those.  The graph is built using an excellent GraphViz tool.
  *
+ * @todo Add support for plugins
+ * @todo Add support for earlier versions of CakePHP
+ *
  * @package app
  * @subpackage Utils
  * @author Leonid Mamchenkov <leonid@mamchenkov.net>
@@ -46,10 +49,12 @@ class GraphShell extends Shell {
 		$this->graph = new Image_GraphViz(true, $graphSettings, 'models');
 
 		$models = array();
-		$models['app'] = $this->getModels();
+		$models = $this->getModels();
 
 		/**
 		 * Relations settings
+		 *
+		 * If you graph is too noisy, try commenting out some of the relationships here
 		 */
 		$relationsSettings = array(
 			'belongsTo'           => array('label' => 'belongsTo', 'dir' => 'forward', 'color' => 'green'),
@@ -60,7 +65,19 @@ class GraphShell extends Shell {
 		$relationsData = $this->getRelations($models, $relationsSettings);
 
 		$this->buildGraph($models, $relationsData, $relationsSettings);
-		$this->outputGraph();
+
+		// See if file name and format were given
+		$fileName = null;
+		$format = null;
+		if (!empty($this->args[0])) {
+			$fileName = $this->args[0];
+		}
+		if (!empty($this->args[1])) {
+			$format = $this->args[1];
+		}
+
+		// Save graph image
+		$this->outputGraph($fileName, $format);
 	}
 
 	/**
@@ -69,15 +86,29 @@ class GraphShell extends Shell {
 	 * Thanks to Harsha M V and Peter Martin via
 	 * http://variable3.com/blog/2010/05/list-all-the-models-and-plugins-of-a-cakephp-application/
 	 *
-	 * @todo Add support for plugins
-	 * @todo Add support for earlier versions of CakePHP
-	 *
 	 * @return array
 	 */
 	private function getModels() {
 		$result = array();
 
-		$result = App::objects('model');
+		$result['app'] = App::objects('model');
+
+		$plugins = App::objects('plugin');
+		if (!empty($plugins)) {
+			foreach ($plugins as $plugin) {
+				$pluginModels = App::objects('model', App::pluginPath($plugin) . 'models' . DS, false);
+				if (!empty($pluginModels)) {
+					if (empty($result[$plugin])) {
+						$result[$plugin] = array();
+					}
+
+					foreach ($pluginModels as $model) {
+						$result[$plugin][] = "$plugin.$model";
+					}
+				}
+			}
+		}
+		debug($result);
 
 		return $result;
 	}
@@ -99,7 +130,17 @@ class GraphShell extends Shell {
 
 				foreach ($relationsSettings as $relation => $settings) {
 					if (!empty($modelInstance->$relation) && is_array($modelInstance->$relation)) {
-						$result[$plugin][$model][$relation] = array_keys($modelInstance->$relation);
+						$result[$plugin][$model][$relation] = array();
+
+						$relations = $modelInstance->$relation;
+						foreach ($relations as $name => $value) {
+							if (is_array($value) && !empty($value) && !empty($value['className'])) {
+								$result[$plugin][$model][$relation][] = $value['className'];
+							}
+							else {
+								$result[$plugin][$model][$relation][] = $name;
+							}
+						}
 					}
 				}
 			}
@@ -145,11 +186,17 @@ class GraphShell extends Shell {
 	 * @param string $format Any of the GraphViz supported formats
 	 * @return numeric Number of bytes written to file
 	 */
-	private function outputGraph($fileName = null, $format = 'png') {
+	private function outputGraph($fileName = null, $format = null) {
 		$result = 0;
 
+		// Fall back on PNG if no format was given
+		if (empty($format)) {
+			$format = 'png';
+		}
+
+		// Fall back on something when nothing is given
 		if (empty($fileName)) {
-			$fileName = dirname(__FILE__) . DS . basename(__FILE__, '.php') . '.' . $format;
+			$fileName = basename(__FILE__, '.php') . '.' . $format;
 		}
 
 		$imageData = $this->graph->fetch($format);
