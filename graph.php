@@ -18,14 +18,87 @@ require_once 'Image/GraphViz.php';
  * finds all relations between them, and then generates a graphical representation
  * of those.  The graph is built using an excellent GraphViz tool.
  *
- * @todo Add support for plugins
+ * <b>Usage:</b>
+ *
+ * <code>
+ * $ php -f cake/console/cake.php graph [filename] [format]
+ * </code>
+ *
+ * <b>Parameters:</b>
+ *
+ * * filename - an optional full path to the output file. If omitted, graph.png in
+ *              current folder will be used
+ * * format - an optional output format, supported by GraphViz (png,svg,etc)
+ *
  * @todo Add support for earlier versions of CakePHP
  *
  * @package app
  * @subpackage Utils
  * @author Leonid Mamchenkov <leonid@mamchenkov.net>
+ * @version 2.0 (Blue Octopus On Steroids)
  */
 class GraphShell extends Shell {
+
+	/**
+	 * Graph settings
+	 *
+	 * Consult the GraphViz documentation for node, edge, and
+	 * graph attributes for more information.
+	 *
+	 * @link http://www.graphviz.org/doc/info/attrs.html
+	 */
+	public $graphSettings = array(
+			'label' => 'CakePHP Model Relationships',
+			'labelloc' => 't',
+			'fontname' => 'Helvetica',
+			'fontsize' => 12,
+			//
+			// Tweaking these might produce better results
+			//
+			'concentrate' => 'true',  // join multiple connecting lines between same nodes
+			'landscape' => 'false',   // rotate resulting graph by 90 degrees
+			'rankdir' => 'TB',        // interpret nodes from Top-to-Bottom or Left-to-Right (use: LR)
+		);
+
+	/**
+	 * Relations settings
+	 *
+	 * My weak attempt at using Crow's Foot Notation for 
+	 * CakePHP model relationships.  
+	 *
+	 * NOTE: Order of the relations in this list is sometimes important.
+	 */
+	public $relationsSettings = array(
+			'belongsTo'           => array('label' => 'belongsTo', 'dir' => 'both', 'color' => 'blue',    'arrowhead' => 'none', 'arrowtail' => 'crow', 'fontname' => 'Helvetica', 'fontsize' => 10, ),
+			'hasMany'             => array('label' => 'hasMany',   'dir' => 'both', 'color' => 'blue',    'arrowhead' => 'crow', 'arrowtail' => 'none', 'fontname' => 'Helvetica', 'fontsize' => 10, ),
+			'hasOne'              => array('label' => 'hasOne',    'dir' => 'both', 'color' => 'magenta', 'arrowhead' => 'tee',  'arrowtail' => 'none', 'fontname' => 'Helvetica', 'fontsize' => 10, ),
+			'hasAndBelongsToMany' => array('label' => 'HABTM',     'dir' => 'both', 'color' => 'red',     'arrowhead' => 'crow', 'arrowtail' => 'crow', 'fontname' => 'Helvetica', 'fontsize' => 10, ),
+		);
+
+	/**
+	 * Miscelanous settings
+	 *
+	 * These are settings that change the behavior
+	 * of the application, but which I didn't feel
+	 * safe enough to send to GraphViz.
+	 */
+	public $miscSettings = array(
+			// If true, graphs will use only real model names (via className).  If false,
+			// graphs will use whatever you specified as the name of relationship class.
+			// This might get very confusing, so you mostly would want to keep this as true.
+			'realModels' => true, 
+
+			// If set to not empty value, the value will be used as a date() format, that
+			// will be appended to the main graph label. Set to empty string or null to avoid
+			// timestamping generated graphs.
+			'timestamp' => ' [Y-m-d H:i:s]',
+		);
+
+	/**
+	 * Change this to something else if you 
+	 * have a plugin with the same name.
+	 */
+	const GRAPH_LEGEND = 'Graph Legend';
 
 	/**
 	 * We'll use this to store the graph thingy
@@ -33,39 +106,24 @@ class GraphShell extends Shell {
 	private $graph;
 
 	/**
-	 * Main
+	 * CakePHP's Shell main() routine
+	 *
+	 * This routine is called when the shell is executed via console.
 	 */
 	public function main() {
 
-		/**
-		 * Graph settings
-		 *
-		 * Consult the GraphViz documentation for more options
-		 */
-		$graphSettings = array(
-				'label' => 'Model relationships (as of ' . date('Y-m-d H:i:s') . ')', 
-				'labelloc' => 't',
-			);
+		// Prepare graph settings
+		$graphSettings = $this->graphSettings;
+		if (!empty($this->miscSettings['timestamp'])) {
+			$graphSettings['label'] .= date($this->miscSettings['timestamp']);
+		}
 
+		// Initialize the graph
 		$this->graph = new Image_GraphViz(true, $graphSettings, 'models');
 
-		$models = array();
 		$models = $this->getModels();
-
-		/**
-		 * Relations settings
-		 *
-		 * If you graph is too noisy, try commenting out some of the relationships here
-		 */
-		$relationsSettings = array(
-			'belongsTo'           => array('label' => 'belongsTo', 'dir' => 'both', 'color' => 'green', 'arrowhead' => 'tee', 'arrowtail' => 'crow'),
-			'hasOne'              => array('label' => 'hasOne',    'dir' => 'both', 'color' => 'magenta', 'arrowhead' => 'tee', 'arrowtail' => 'tee'),
-			'hasMany'             => array('label' => 'hasMany',   'dir' => 'both', 'color' => 'blue', 'arrowhead' => 'crow', 'arrowtail' => 'tee'),
-			'hasAndBelongsToMany' => array('label' => 'HABTM',     'dir' => 'both', 'color' => 'red',  'arrowhead' => 'crow', 'arrowtail' => 'crow'),
-		);
-		$relationsData = $this->getRelations($models, $relationsSettings);
-
-		$this->buildGraph($models, $relationsData, $relationsSettings);
+		$relationsData = $this->getRelations($models, $this->relationsSettings);
+		$this->buildGraph($models, $relationsData, $this->relationsSettings);
 
 		// See if file name and format were given
 		$fileName = null;
@@ -109,7 +167,6 @@ class GraphShell extends Shell {
 				}
 			}
 		}
-		debug($result);
 
 		return $result;
 	}
@@ -127,20 +184,27 @@ class GraphShell extends Shell {
 		foreach ($modelsList as $plugin => $models) {
 			foreach ($models as $model) {
 
+				// This will work only if you have models and nothing else
+				// in app/models/ and app/plugins/*/models/ . Otherwise, ***KABOOM*** and ***CRASH***.
+				// Rearrange your files or patch up $this->getModels()
 				$modelInstance = ClassRegistry::init($model);
 
 				foreach ($relationsSettings as $relation => $settings) {
 					if (!empty($modelInstance->$relation) && is_array($modelInstance->$relation)) {
-						$result[$plugin][$model][$relation] = array();
 
-						$relations = $modelInstance->$relation;
-						foreach ($relations as $name => $value) {
-							if (is_array($value) && !empty($value) && !empty($value['className'])) {
-								$result[$plugin][$model][$relation][] = $value['className'];
+						if ($this->miscSettings['realModels']) {
+							$result[$plugin][$model][$relation] = array();
+							foreach ($modelInstance->$relation as $name => $value) {
+								if (is_array($value) && !empty($value) && !empty($value['className'])) {
+									$result[$plugin][$model][$relation][] = $value['className'];
+								}
+								else {
+									$result[$plugin][$model][$relation][] = $name;
+								}
 							}
-							else {
-								$result[$plugin][$model][$relation][] = $name;
-							}
+						}
+						else {
+							$result[$plugin][$model][$relation] = array_keys($modelInstance->$relation);
 						}
 					}
 				}
@@ -163,6 +227,11 @@ class GraphShell extends Shell {
 		// We'll collect apps and plugins in here
 		$plugins = array();
 
+		// Add special cluster for Legend
+		$plugins[] = self::GRAPH_LEGEND;
+		$this->buildGraphLegend($settings);
+
+
 		// Add nodes for all models
 		foreach ($modelsList as $plugin => $models) {
 			if (!in_array($plugin, $plugins)) {
@@ -171,7 +240,7 @@ class GraphShell extends Shell {
 
 			foreach ($models as $model) {
 				$label = preg_replace("/^$plugin\./", '', $model);
-				$this->graph->addNode($model, array('label' => $label, 'shape' => 'box'), $plugin);
+				$this->graph->addNode($model, array('label' => $label, 'shape' => 'box', 'fontname' => 'Helvetica', 'fontsize' => 10, ), $plugin);
 			}
 		}
 
@@ -194,21 +263,43 @@ class GraphShell extends Shell {
 			}
 		}
 
-		// Add special cluster for Legend
-		$plugins[] = 'Graph Legend';
-		foreach ($settings as $relation => $relationSettings) {
-			$from = 'legend_' . (string) rand(1,10000);
-			$to = 'legend_' . (string) rand(1,10000);
-			$this->graph->addNode($from, array('label' => '', 'shape' => 'box'), 'Graph Legend');
-			$this->graph->addNode($to, array('label' => '', 'shape' => 'box'), 'Graph Legend');
-
-			$relationSettings['labelfontzie'] = 10;
-			$this->graph->addEdge(array($from => $to), $relationSettings);
-		}
-
 		// Add clusters for apps and plugins
 		foreach ($plugins as $plugin) {
 			$this->graph->addCluster($plugin, $plugin);
+		}
+	}
+
+	/**
+	 * Add graph legend
+	 *
+	 * For every type of the relationship in CakePHP we add two nodes (from, to)
+	 * to the graph and then link them, using the settings of each relationship
+	 * type.  Nodes are grouped into the Graph Legend cluster, so they don't
+	 * interfere with the rest of the nodes.
+	 *
+	 * @param array $relationsSettings Array with relation types and settings
+	 * @return void
+	 */
+	private function buildGraphLegend($relationsSettings) {
+
+		$legendNodeSettings = array(
+				'shape' => 'box',
+				'width' => 0.5,
+				'fontname' => 'Helvetica', 
+				'fontsize' => 10, 
+			);
+
+		foreach ($relationsSettings as $relation => $relationSettings) {
+			$from = $relation . '_from';
+			$to = $relation . '_to';
+
+			$legendNodeSettings['label'] = 'A';
+			$this->graph->addNode($from, $legendNodeSettings, self::GRAPH_LEGEND);
+
+			$legendNodeSettings['label'] = 'B';
+			$this->graph->addNode($to, $legendNodeSettings, self::GRAPH_LEGEND);
+
+			$this->graph->addEdge(array($from => $to), $relationSettings);
 		}
 	}
 
