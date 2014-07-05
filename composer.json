@@ -1,30 +1,32 @@
 {
 	"name": "mamchenkov/cakephp-graphviz-models",
 	"description": "A tool to generate a graph of model relationships",
+	"type": "cakephp-plugin",
+	"keywords": ["cakephp", "model", "graph", "chart", "erd", "graphviz"],
 	"version": "2.1",
+	"license": "GPL-2.0",
 	"authors": [
 		{
 			"name": "Leonid Mamchenkov",
 			"email": "leonid@memchenkov.net",
-			"homepage": "http://mamchenkov.net"
+			"homepage": "http://mamchenkov.net",
+			"role": "Author"
 		}
 	],
 	"support": {
 		"issues": "https://github.com/mamchenkov/CakePHP-GraphViz-Models/issues",
 		"source": "https://github.com/mamchenkov/CakePHP-GraphViz-Models"
 	},
-	"repositories": [
-		{
-			"type": "pear",
-			"url": "http://pear.cakephp.org"
-		}
-	],
 	"require": {
 		"php": ">=5.3.3",
-		"pear-cakephp/cakephp": "2.*",
+		"cakephp/cakephp": "2.*",
+		"composer/installers": "*",
 		"phpDocumentor/GraphViz": "1.*"
 	},
 	"autoload" : {
 		"classmap": ["Console/Command/GraphShell.php"]
+	},
+	"extra": {
+		"isntaller-name": "CakePHP-GraphViz-Models"
 	}
 }
