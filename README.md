@@ -1,4 +1,4 @@
-CakePHP GraphViz Models
+CakePHP GraphViz Relations
 -----------------------
 
 This is a CakePHP shell that will find all models in your CakePHP application and
@@ -33,7 +33,7 @@ Usage
 The simplest way to use this shell is just to run it via CakePHP console:
 
 ```
-$ Console/cake GraphViz.graph
+$ Console/cake GraphVizRelations.graph
 ```
 
 This should generate a graph.png image in your current directory.  Please have a look.
@@ -42,13 +42,13 @@ If you need more control, there are two options that this shell understand from 
 command line: filename and format.   You can use either the filename option like so:
 
 ```
-$ Console/cake GraphViz.graph /tmp/my_models.png
+$ Console/cake GraphVizRelations.graph /tmp/my_models.png
 ```
 
 Or you can use both options together like so:
 
 ```
-$ Console/cake GraphViz.graph /tmp/my_models.svg svg
+$ Console/cake GraphVizRelations.graph /tmp/my_models.svg svg
 ```
 
 No special magic is done about the filename.  What You Give Is What You Get.  As for the

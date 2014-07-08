@@ -27,6 +27,6 @@
 		"classmap": ["Console/Command/GraphShell.php"]
 	},
 	"extra": {
-		"installer-name": "GraphViz"
+		"installer-name": "GraphVizRelations"
 	}
 }

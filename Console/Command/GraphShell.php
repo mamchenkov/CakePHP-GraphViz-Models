@@ -9,7 +9,7 @@ use phpDocumentor\GraphViz\Graph;
 use phpDocumentor\GraphViz\Node;
 
 /**
- * CakePHP GraphViz Models
+ * CakePHP GraphViz Relations
  *
  * This shell examines all models in the current application and its plugins,
  * finds all relations between them, and then generates a graphical representation
@@ -18,7 +18,7 @@ use phpDocumentor\GraphViz\Node;
  * <b>Usage:</b>
  *
  * <code>
- * $ Console/cake GraphViz.graph [filename] [format]
+ * $ Console/cake GraphVizRelations.graph [filename] [format]
  * </code>
  *
  * <b>Parameters:</b>
@@ -27,9 +27,8 @@ use phpDocumentor\GraphViz\Node;
  *              TMP folder will be used
  * * format - an optional output format, supported by GraphViz (png, svg, etc)
  *
- * @package app
- * @subpackage Utils
  * @author Leonid Mamchenkov <leonid@mamchenkov.net>
+ * @author Mark Scherer
  * @version 2.1 (Angry Blue Octopus On Steroids)
  */
 class GraphShell extends AppShell {
