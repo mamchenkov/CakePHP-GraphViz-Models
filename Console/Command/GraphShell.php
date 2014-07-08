@@ -1,10 +1,5 @@
 <?php
-/**
- * PHP 5
- *
- * @package app
- * @subpackage app.vendors.shells
- */
+
 App::uses('AppShell', 'Console\Command');
 App::uses('CakeLog', 'Log');
 App::uses('ClassRegistry', 'Utility');
@@ -23,14 +18,14 @@ use phpDocumentor\GraphViz\Node;
  * <b>Usage:</b>
  *
  * <code>
- * $ Console/cake graph [filename] [format]
+ * $ Console/cake GraphViz.graph [filename] [format]
  * </code>
  *
  * <b>Parameters:</b>
  *
  * * filename - an optional full path to the output file. If omitted, graph.png in
- *              current folder will be used
- * * format - an optional output format, supported by GraphViz (png,svg,etc)
+ *              TMP folder will be used
+ * * format - an optional output format, supported by GraphViz (png, svg, etc)
  *
  * @package app
  * @subpackage Utils
@@ -415,7 +410,6 @@ class GraphShell extends AppShell {
 			$fileName = 'graph.' . $format;
 		}
 
-		//$this->graph->setPath($path);
 		$this->graph->export($format, $fileName);
 
 		return true;
