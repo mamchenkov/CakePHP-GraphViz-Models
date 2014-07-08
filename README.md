@@ -5,7 +5,7 @@ This is a CakePHP shell that will find all models in your CakePHP application an
 plugins, figure out the relationships between them, and will build a nice graph,
 visualzing those relationships for you.
 
-It supports CakePHP 2.0, and requires PHP 5.3.3 or greater.  But there
+It supports CakePHP 2.x, and requires PHP 5.3.3 or greater.  But there
 are numerous ways it can fail to work for you.  If it does fail, please let me
 know and I'll try to fix it.
 
@@ -13,12 +13,6 @@ know and I'll try to fix it.
 Intallation via Composer
 
 ```
-repositories: [
-	{
-		"type": "vcs",
-		"url": "http://github.com/mamchenkov/CakePHP-GraphViz-Models"
-	}
-],
 require: {
 	"mamchenkov/cakephp-graphviz-models": "dev-master"
 }
@@ -30,7 +24,7 @@ Requirements
 
 Since version 2.1 (Angry Blue Octopus On Steroids), this script relies on phpDocumentor/Graphviz
 package, rather than directly on the command-line dot tool.
-
+But you will need to install the Graphviz command line tool incl. dot.
 
 
 Usage
@@ -39,7 +33,7 @@ Usage
 The simplest way to use this shell is just to run it via CakePHP console:
 
 ```
-$ Console/cake graph
+$ Console/cake GraphViz.graph
 ```
 
 This should generate a graph.png image in your current directory.  Please have a look.
@@ -48,13 +42,13 @@ If you need more control, there are two options that this shell understand from 
 command line: filename and format.   You can use either the filename option like so:
 
 ```
-$ Console/cake graph /tmp/my_models.png
+$ Console/cake GraphViz.graph /tmp/my_models.png
 ```
 
 Or you can use both options together like so:
 
 ```
-$ Console/cake graph /tmp/my_models.svg svg
+$ Console/cake GraphViz.graph /tmp/my_models.svg svg
 ```
 
 No special magic is done about the filename.  What You Give Is What You Get.  As for the
