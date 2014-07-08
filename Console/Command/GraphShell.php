@@ -260,7 +260,7 @@ class GraphShell extends AppShell {
  * @return Graph $clusterGraph
  */
 	protected function _addCluster($graph, $name, $label = null, $attributes = array()) {
-		if ($label == null) {
+		if ($label === null) {
 			$label = $name;
 		}
 		if (!$graph->hasGraph('cluster_' . $name)) {
