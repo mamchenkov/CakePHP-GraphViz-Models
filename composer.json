@@ -27,6 +27,6 @@
 		"classmap": ["Console/Command/GraphShell.php"]
 	},
 	"extra": {
-		"isntaller-name": "CakePHP-GraphViz-Models"
+		"installer-name": "GraphVizRelations"
 	}
 }

@@ -1,10 +1,5 @@
 <?php
-/**
- * PHP 5
- *
- * @package app
- * @subpackage app.vendors.shells
- */
+
 App::uses('AppShell', 'Console\Command');
 App::uses('CakeLog', 'Log');
 App::uses('ClassRegistry', 'Utility');
@@ -14,7 +9,7 @@ use phpDocumentor\GraphViz\Graph;
 use phpDocumentor\GraphViz\Node;
 
 /**
- * CakePHP GraphViz Models
+ * CakePHP GraphViz Relations
  *
  * This shell examines all models in the current application and its plugins,
  * finds all relations between them, and then generates a graphical representation
@@ -23,18 +18,17 @@ use phpDocumentor\GraphViz\Node;
  * <b>Usage:</b>
  *
  * <code>
- * $ Console/cake graph [filename] [format]
+ * $ Console/cake GraphVizRelations.graph [filename] [format]
  * </code>
  *
  * <b>Parameters:</b>
  *
  * * filename - an optional full path to the output file. If omitted, graph.png in
- *              current folder will be used
- * * format - an optional output format, supported by GraphViz (png,svg,etc)
+ *              TMP folder will be used
+ * * format - an optional output format, supported by GraphViz (png, svg, etc)
  *
- * @package app
- * @subpackage Utils
  * @author Leonid Mamchenkov <leonid@mamchenkov.net>
+ * @author Mark Scherer
  * @version 2.1 (Angry Blue Octopus On Steroids)
  */
 class GraphShell extends AppShell {
@@ -48,6 +42,7 @@ class GraphShell extends AppShell {
  * @link http://www.graphviz.org/doc/info/attrs.html
  */
 	public $graphSettings = array(
+			'path' => '', // Where the bin dir of dot is located at - if not added to PATH env
 			'label' => 'CakePHP Model Relationships',
 			'labelloc' => 't',
 			'fontname' => 'Helvetica',
@@ -55,9 +50,9 @@ class GraphShell extends AppShell {
 			//
 			// Tweaking these might produce better results
 			//
-			'concentrate' => 'true', // join multiple connecting lines between same nodes
-			'landscape' => 'false', // rotate resulting graph by 90 degrees
-			'rankdir' => 'TB', // interpret nodes from Top-to-Bottom or Left-to-Right (use: LR)
+			'concentrate' => 'true', // Join multiple connecting lines between same nodes
+			'landscape' => 'false', // Rotate resulting graph by 90 degrees
+			'rankdir' => 'TB', // Interpret nodes from Top-to-Bottom or Left-to-Right (use: LR)
 		);
 
 /**
@@ -111,6 +106,8 @@ class GraphShell extends AppShell {
  * This routine is called when the shell is executed via console.
  */
 	public function main() {
+		$this->graphSettings = (array)Configure::read('GraphViz') + $this->graphSettings;
+
 		// Prepare graph settings
 		$graphSettings = $this->graphSettings;
 		if (!empty($this->miscSettings['timestamp'])) {
@@ -128,10 +125,10 @@ class GraphShell extends AppShell {
 		$this->_buildGraph($models, $relationsData, $this->relationsSettings);
 
 		// See if file name and format were given
-		$fileName = null;
+		$fileName = TMP . 'graph.png';
 		$format = null;
 		if (!empty($this->args[0])) {
-			$fileName = $this->args[0];
+			$fileName = TMP . $this->args[0];
 		}
 		if (!empty($this->args[1])) {
 			$format = $this->args[1];
@@ -151,7 +148,7 @@ class GraphShell extends AppShell {
 		// make sure the model isn't abstract or an interface
 		$toDelete = [];
 		foreach ($classList as $key => $class) {
-			App::uses($class, (($plugin != null) ? $plugin . '.' : '') . 'Model');
+			App::uses($class, ($plugin ? $plugin . '.' : '') . 'Model');
 			$reflectionClass = new ReflectionClass($class);
 			if (!$reflectionClass->isInstantiable()) {
 				$toDelete[] = $key;
@@ -174,19 +171,31 @@ class GraphShell extends AppShell {
 	protected function _getModels() {
 		$result = array();
 
-		$result['app'] = $this->_onlyInstantiableClasses(App::objects('Model', null, false));
+		$appModels = $this->_onlyInstantiableClasses(App::objects('Model', null, false));
+		$result['app'] = array();
+		foreach ($appModels as $model) {
+			if (strpos($model, 'AppModel') !== false) {
+				continue;
+			}
+			$result['app'][] = $model;
+		}
 		$plugins = CakePlugin::loaded();
-		if (!empty($plugins)) {
-			foreach ($plugins as $plugin) {
-				$pluginModels = $this->_onlyInstantiableClasses(App::objects($plugin . '.Model', null, false), $plugin);
-				if (!empty($pluginModels)) {
-					if (!isset($result[$plugin])) {
-						$result[$plugin] = array();
-					}
+		foreach ($plugins as $plugin) {
+			if (in_array($plugin, array('DebugKit', 'Migrations'))) {
+				continue;
+			}
 
-					foreach ($pluginModels as $model) {
-						$result[$plugin][] = $plugin . '.' . $model;
+			$pluginModels = $this->_onlyInstantiableClasses(App::objects($plugin . '.Model', null, false), $plugin);
+			if (!empty($pluginModels)) {
+				if (!isset($result[$plugin])) {
+					$result[$plugin] = array();
+				}
+
+				foreach ($pluginModels as $model) {
+					if (strpos($model, 'AppModel') !== false) {
+						continue;
 					}
+					$result[$plugin][] = $plugin . '.' . $model;
 				}
 			}
 		}
@@ -208,25 +217,29 @@ class GraphShell extends AppShell {
 			foreach ($models as $model) {
 
 				// This will work only if you have models and nothing else
-				// in app/Model/ and app/Plugins/*/Model/ . Otherwise, ***KABOOM*** and ***CRASH***.
+				// in app/Model/ and app/Plugin/*/Model/ . Otherwise, ***KABOOM*** and ***CRASH***.
 				// Rearrange your files or patch up $this->getModels()
 				$modelInstance = ClassRegistry::init($model);
+				if (isset($modelInstance->useTable) && $modelInstance->useTable === false) {
+					continue;
+				}
 
 				foreach ($relationsSettings as $relation => $settings) {
-					if (!empty($modelInstance->$relation) && is_array($modelInstance->$relation)) {
+					if (empty($modelInstance->$relation) || !is_array($modelInstance->$relation)) {
+						continue;
+					}
 
-						if ($this->miscSettings['realModels']) {
-							$result[$plugin][$model][$relation] = array();
-							foreach ($modelInstance->$relation as $name => $value) {
-								if (is_array($value) && !empty($value) && !empty($value['className'])) {
-									$result[$plugin][$model][$relation][] = $value['className'];
-								} else {
-									$result[$plugin][$model][$relation][] = $name;
-								}
+					if ($this->miscSettings['realModels']) {
+						$result[$plugin][$model][$relation] = array();
+						foreach ($modelInstance->$relation as $name => $value) {
+							if (is_array($value) && !empty($value) && !empty($value['className'])) {
+								$result[$plugin][$model][$relation][] = $value['className'];
+							} else {
+								$result[$plugin][$model][$relation][] = $name;
 							}
-						} else {
-							$result[$plugin][$model][$relation] = array_keys($modelInstance->$relation);
 						}
+					} else {
+						$result[$plugin][$model][$relation] = array_keys($modelInstance->$relation);
 					}
 				}
 			}
@@ -246,7 +259,7 @@ class GraphShell extends AppShell {
  * @return Graph $clusterGraph
  */
 	protected function _addCluster($graph, $name, $label = null, $attributes = array()) {
-		if ($label == null) {
+		if ($label === null) {
 			$label = $name;
 		}
 		if (!$graph->hasGraph('cluster_' . $name)) {
@@ -319,11 +332,11 @@ class GraphShell extends AppShell {
 
 					foreach ($relatedModels as $relatedModel) {
 						$modelNode = $this->graph->findNode($model);
-						if ($modelNode == null) {
+						if ($modelNode === null) {
 							CakeLog::error('Could not find node for ' . $model);
 						} else {
 							$relatedModelNode = $this->graph->findNode($relatedModel);
-							if ($relatedModelNode == null) {
+							if ($relatedModelNode === null) {
 								CakeLog::error('Could not find node for ' . $relatedModel);
 							} else {
 								$edge = Edge::create($modelNode, $relatedModelNode);
@@ -400,4 +413,5 @@ class GraphShell extends AppShell {
 
 		return true;
 	}
+
 }
