@@ -31,7 +31,7 @@ use phpDocumentor\GraphViz\Node;
  * @author Mark Scherer
  * @version 2.1 (Angry Blue Octopus On Steroids)
  */
-class GraphShell extends AppShell {
+class GraphShell extends Shell {
 
 /**
  * Graph settings
@@ -43,7 +43,7 @@ class GraphShell extends AppShell {
  */
 	public $graphSettings = array(
 			'path' => '', // Where the bin dir of dot is located at - if not added to PATH env
-			'label' => 'CakePHP Model Relationships',
+			'label' => 'CakePHP Modelos Relacionados',
 			'labelloc' => 't',
 			'fontname' => 'Helvetica',
 			'fontsize' => 12,
@@ -125,7 +125,7 @@ class GraphShell extends AppShell {
 		$this->_buildGraph($models, $relationsData, $this->relationsSettings);
 
 		// See if file name and format were given
-		$fileName = TMP . 'graph.png';
+		$fileName = TMP . 'grafico.png';
 		$format = null;
 		if (!empty($this->args[0])) {
 			$fileName = TMP . $this->args[0];

@@ -5,25 +5,27 @@
 	"keywords": ["cakephp", "model", "graph", "chart", "erd", "graphviz"],
 	"version": "2.1",
 	"license": "GPL-2.0",
-	"authors": [
-		{
-			"name": "Leonid Mamchenkov",
-			"email": "leonid@memchenkov.net",
-			"homepage": "http://mamchenkov.net",
-			"role": "Author"
-		}
-	],
+	"authors": [{
+		"name": "Leonid Mamchenkov",
+		"email": "leonid@memchenkov.net",
+		"homepage": "http://mamchenkov.net",
+		"role": "Author"
+	}, {
+		"name": "Christian Quispe (Oxicode)",
+		"email": "christian.quispeh@oxicode.io",
+		"homepage": "http://oxicode.io",
+		"role": "Developer"
+	}],
 	"support": {
 		"issues": "https://github.com/mamchenkov/CakePHP-GraphViz-Models/issues",
 		"source": "https://github.com/mamchenkov/CakePHP-GraphViz-Models"
 	},
 	"require": {
 		"php": ">=5.3.3",
-		"cakephp/cakephp": "2.*",
 		"composer/installers": "*",
 		"phpDocumentor/GraphViz": "1.*"
 	},
-	"autoload" : {
+	"autoload": {
 		"classmap": ["Console/Command/GraphShell.php"]
 	},
 	"extra": {
