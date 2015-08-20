@@ -18,6 +18,12 @@ require: {
 }
 ```
 
+Load plugin in `app/Config/bootstrap.php`
+
+```php
+CakePlugin::load('GraphVizRelations');
+```
+
 
 Requirements
 ------------
