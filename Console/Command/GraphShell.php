@@ -1,6 +1,6 @@
 <?php
 
-App::uses('AppShell', 'Console\Command');
+App::uses('AppShell', 'Console/Command');
 App::uses('CakeLog', 'Log');
 App::uses('ClassRegistry', 'Utility');
 
