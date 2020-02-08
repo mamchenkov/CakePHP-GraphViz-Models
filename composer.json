@@ -21,7 +21,7 @@
 		"php": ">=5.3.3",
 		"cakephp/cakephp": "2.*",
 		"composer/installers": "*",
-		"phpDocumentor/GraphViz": "1.*"
+		"phpdocumentor/graphviz": "1.*"
 	},
 	"autoload" : {
 		"classmap": ["Console/Command/GraphShell.php"]
